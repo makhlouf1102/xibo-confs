@@ -31,7 +31,9 @@ The container itself uses `--privileged`, host cgroups, and `systemd` because `s
 
 Install and enable Docker on the NixOS host before you try to build this container.
 
-In `/etc/nixos/configuration.nix`, add:
+If your normal user is already defined somewhere in your NixOS configuration, add that user to the `docker` group with their real login name. Do not paste `your-username` literally.
+
+Example for an existing user definition:
 
 ```nix
 { config, pkgs, ... }:
@@ -42,7 +44,29 @@ In `/etc/nixos/configuration.nix`, add:
     docker
     docker-compose
   ];
-  users.users.your-username.extraGroups = [ "docker" ];
+  users.users.makhl.extraGroups = [ "docker" ];
+}
+```
+
+If you are defining the user in this same file, make sure it is a normal user and has a group:
+
+```nix
+{ config, pkgs, ... }:
+
+{
+  virtualisation.docker.enable = true;
+  environment.systemPackages = with pkgs; [
+    docker
+    docker-compose
+  ];
+
+  users.users.makhl = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "networkmanager" "docker" ];
+    group = "makhl";
+  };
+
+  users.groups.makhl = {};
 }
 ```
 
