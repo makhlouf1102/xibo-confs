@@ -153,15 +153,23 @@ chmod +x manage-xibo.sh
 If the container comes up, initialize and install Xibo:
 
 ```bash
-docker compose exec xibo-player create-host-user.sh
-docker compose exec xibo-player bash -lc 'snap wait system seed.loaded'
-docker compose exec xibo-player snap install xibo-player
+docker exec -it xibo-player-wayland create-host-user.sh
+docker exec -it xibo-player-wayland bash -lc 'snap wait system seed.loaded'
+docker exec -it xibo-player-wayland snap install xibo-player
 ```
 
 Then run the player:
 
 ```bash
-docker compose exec xibo-player run-xibo.sh
+docker exec -it \
+  -e HOST_UID="$(id -u)" \
+  -e HOST_GID="$(id -g)" \
+  -e HOST_USER="$(id -un)" \
+  -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY" \
+  -e DISPLAY="${DISPLAY:-}" \
+  -e XAUTHORITY="/tmp/host-xauthority" \
+  xibo-player-wayland \
+  run-xibo.sh
 ```
 
 The helper script can also do the full sequence:
@@ -198,7 +206,7 @@ docker exec -it xibo-player-wayland run-xibo.sh
 If the install or startup fails, run:
 
 ```bash
-docker compose exec xibo-player diagnose-xibo.sh
+docker exec -it xibo-player-wayland diagnose-xibo.sh
 ```
 
 If you are using plain Docker instead of Compose:
