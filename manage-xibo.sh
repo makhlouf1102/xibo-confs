@@ -71,6 +71,18 @@ compose() {
   docker compose "$@"
 }
 
+compose_exec() {
+  compose exec \
+    -e HOST_UID="${HOST_UID}" \
+    -e HOST_GID="${HOST_GID}" \
+    -e HOST_USER="${HOST_USER}" \
+    -e WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
+    -e DISPLAY="${DISPLAY}" \
+    -e XAUTHORITY="/tmp/host-xauthority" \
+    "${SERVICE_NAME}" \
+    "$@"
+}
+
 ensure_container() {
   echo
   echo "Building and starting the container..."
@@ -81,37 +93,37 @@ ensure_container() {
 ensure_host_user() {
   echo
   echo "Creating the host-matching user inside the container..."
-  compose exec "${SERVICE_NAME}" create-host-user.sh
+  compose_exec create-host-user.sh
 }
 
 wait_for_snapd() {
   echo
   echo "Waiting for snapd seeding..."
-  compose exec "${SERVICE_NAME}" bash -lc 'snap wait system seed.loaded'
+  compose_exec bash -lc 'snap wait system seed.loaded'
 }
 
 ensure_xibo_installed() {
   echo
   echo "Checking whether xibo-player is already installed..."
-  if compose exec "${SERVICE_NAME}" bash -lc 'snap list xibo-player >/dev/null 2>&1'; then
+  if compose_exec bash -lc 'snap list xibo-player >/dev/null 2>&1'; then
     echo "xibo-player is already installed."
     return
   fi
 
   echo "Installing xibo-player..."
-  compose exec "${SERVICE_NAME}" snap install xibo-player
+  compose_exec snap install xibo-player
 }
 
 run_xibo() {
   echo
   echo "Launching Xibo..."
-  compose exec "${SERVICE_NAME}" run-xibo.sh
+  compose_exec run-xibo.sh
 }
 
 diagnose() {
   echo
   echo "Running diagnostics..."
-  compose exec "${SERVICE_NAME}" diagnose-xibo.sh
+  compose_exec diagnose-xibo.sh
 }
 
 require_command docker
