@@ -6,7 +6,7 @@ SERVICE_NAME="${SERVICE_NAME:-xibo-player}"
 
 usage() {
   cat <<'EOF'
-Usage: ./manage-xibo.sh [setup|run|all|diagnose]
+Usage: ./manage-xibo.sh [setup|run|all|diagnose|fresh]
 
 Modes:
   setup     Prepare env, build/start the container, create the host user, wait
@@ -14,6 +14,8 @@ Modes:
   run       Launch Xibo inside the running container.
   all       Run setup, then launch Xibo.
   diagnose  Run the container diagnostic helper.
+  fresh     Remove the current container, rebuild from scratch, run setup,
+            and then launch Xibo.
 EOF
 }
 
@@ -91,6 +93,17 @@ ensure_container() {
   compose up -d
 }
 
+fresh_container() {
+  echo
+  echo "Stopping and removing the current container..."
+  compose down --remove-orphans || true
+
+  echo
+  echo "Rebuilding the image from scratch and starting the container..."
+  compose build --no-cache
+  compose up -d
+}
+
 ensure_host_user() {
   echo
   echo "Creating the host-matching user inside the container..."
@@ -144,6 +157,14 @@ case "${MODE}" in
   all)
     prepare_env
     ensure_container
+    ensure_host_user
+    wait_for_snapd
+    ensure_xibo_installed
+    run_xibo
+    ;;
+  fresh)
+    prepare_env
+    fresh_container
     ensure_host_user
     wait_for_snapd
     ensure_xibo_installed
