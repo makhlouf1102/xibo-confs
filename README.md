@@ -29,6 +29,40 @@ The container itself uses `--privileged`, host cgroups, and `systemd` because `s
 
 ## Prerequisites on NixOS
 
+Install and enable Docker on the NixOS host before you try to build this container.
+
+In `/etc/nixos/configuration.nix`, add:
+
+```nix
+{ config, pkgs, ... }:
+
+{
+  virtualisation.docker.enable = true;
+  environment.systemPackages = with pkgs; [
+    docker
+    docker-compose
+  ];
+  users.users.your-username.extraGroups = [ "docker" ];
+}
+```
+
+Then apply the configuration:
+
+```bash
+sudo nixos-rebuild switch
+sudo systemctl enable --now docker
+newgrp docker
+```
+
+Check that both commands are available on the host:
+
+```bash
+docker --version
+docker compose version
+```
+
+On many NixOS systems, the `docker compose` subcommand works once Docker is enabled. If it does not, the standalone `docker-compose` package above gives you a fallback command.
+
 You need all of the following on the host:
 
 ```bash
