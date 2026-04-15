@@ -23,4 +23,9 @@ if [ ! -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]; then
   exit 1
 fi
 
-exec gosu "${HOST_UID}:${HOST_GID}" snap run xibo-player
+exec sudo \
+  DISPLAY="${DISPLAY:-}" \
+  XAUTHORITY="${XAUTHORITY:-}" \
+  WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
+  DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" \
+  snap run xibo-player

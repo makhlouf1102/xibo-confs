@@ -16,6 +16,7 @@ That last point is the reason this setup is heavier than a normal GUI container.
 - [compose.yaml](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/compose.yaml): repeatable container startup for Linux Wayland hosts
 - [create-host-user.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/create-host-user.sh): creates a user inside the container that matches the host UID/GID
 - [run-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/run-xibo.sh): launches Xibo under the host-matching UID against the mounted Wayland socket
+- [run-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/run-xibo.sh): launches Xibo with explicit display and D-Bus environment preserved for the snap runtime
 - [diagnose-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/diagnose-xibo.sh): dumps the key environment, socket mounts, and `snapd` status
 - [manage-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/manage-xibo.sh): one-command host helper that prepares the environment, starts or rebuilds the container, installs Xibo if needed, and can launch or diagnose it
 - [start-xibo-container.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/start-xibo-container.sh): plain `docker run` wrapper if you do not want to use Compose
