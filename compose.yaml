@@ -1,0 +1,24 @@
+services:
+  xibo-player:
+    build:
+      context: .
+    image: xibo-snap-wayland
+    container_name: xibo-player-wayland
+    privileged: true
+    cgroup: host
+    network_mode: host
+    ipc: host
+    environment:
+      HOST_UID: "${HOST_UID}"
+      HOST_GID: "${HOST_GID}"
+      HOST_USER: "${HOST_USER:-hostuser}"
+      XDG_RUNTIME_DIR: "${XDG_RUNTIME_DIR}"
+      WAYLAND_DISPLAY: "${WAYLAND_DISPLAY}"
+      DISPLAY: "${DISPLAY:-}"
+      XAUTHORITY: "${XAUTHORITY:-}"
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - "${XDG_RUNTIME_DIR}:/tmp/host-runtime"
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - "${XAUTHORITY:-/dev/null}:${XAUTHORITY:-/tmp/.dummy-xauthority}:ro"
+    stop_signal: SIGRTMIN+3
