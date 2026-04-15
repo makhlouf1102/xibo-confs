@@ -54,6 +54,20 @@ sudo systemctl enable --now docker
 newgrp docker
 ```
 
+To make sure Docker starts automatically on boot, verify the service is enabled:
+
+```bash
+systemctl is-enabled docker
+systemctl status docker --no-pager
+```
+
+If `systemctl is-enabled docker` does not return `enabled`, run:
+
+```bash
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+
 Check that both commands are available on the host:
 
 ```bash
