@@ -28,6 +28,8 @@ It also passes through `/tmp/.X11-unix`, `DISPLAY`, and `XAUTHORITY` as a fallba
 
 The container itself uses `--privileged`, host cgroups, and `systemd` because `snapd` expects a more complete init and kernel integration surface than a typical single-process container.
 
+The runtime scripts also point `DBUS_SESSION_BUS_ADDRESS` at the host session bus mounted under `/tmp/host-runtime/bus`, and the image includes common Noto/DejaVu/Liberation fonts so GTK-based UI text has a better chance of rendering correctly.
+
 ## Prerequisites on NixOS
 
 Install and enable Docker on the NixOS host before you try to build this container.

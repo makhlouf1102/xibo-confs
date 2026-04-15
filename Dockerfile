@@ -20,6 +20,10 @@ RUN apt-get update && apt-get install -y \
     libegl1 \
     libgbm1 \
     mesa-utils \
+    fonts-dejavu-core \
+    fonts-liberation \
+    fonts-noto-core \
+    fonts-noto-cjk \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

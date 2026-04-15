@@ -8,6 +8,7 @@ set -euo pipefail
 
 export XDG_RUNTIME_DIR="/tmp/host-runtime"
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY}"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=/tmp/host-runtime/bus"
 
 if [ -n "${DISPLAY:-}" ]; then
   export DISPLAY
