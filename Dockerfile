@@ -27,7 +27,8 @@ STOPSIGNAL SIGRTMIN+3
 
 COPY create-host-user.sh /usr/local/bin/create-host-user.sh
 COPY run-xibo.sh /usr/local/bin/run-xibo.sh
+COPY diagnose-xibo.sh /usr/local/bin/diagnose-xibo.sh
 
-RUN chmod +x /usr/local/bin/create-host-user.sh /usr/local/bin/run-xibo.sh
+RUN chmod +x /usr/local/bin/create-host-user.sh /usr/local/bin/run-xibo.sh /usr/local/bin/diagnose-xibo.sh
 
 CMD ["/sbin/init"]
