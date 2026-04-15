@@ -15,10 +15,10 @@ services:
       XDG_RUNTIME_DIR: "${XDG_RUNTIME_DIR}"
       WAYLAND_DISPLAY: "${WAYLAND_DISPLAY}"
       DISPLAY: "${DISPLAY:-}"
-      XAUTHORITY: "${XAUTHORITY:-}"
+      XAUTHORITY: "/tmp/host-xauthority"
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - "${XDG_RUNTIME_DIR}:/tmp/host-runtime"
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - "${XAUTHORITY:-/dev/null}:${XAUTHORITY:-/tmp/.dummy-xauthority}:ro"
+      - "${XAUTHORITY:-/dev/null}:/tmp/host-xauthority:ro"
     stop_signal: SIGRTMIN+3

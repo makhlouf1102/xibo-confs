@@ -187,6 +187,8 @@ The most likely failures are:
 - Xibo falls back to XWayland and needs a valid `DISPLAY` and `XAUTHORITY`
 - the host Docker configuration or cgroup setup is still not sufficient for `systemd` plus `snapd`
 
+For X11/XWayland fallback, the host `XAUTHORITY` file is mounted into the container at `/tmp/host-xauthority`, and the container environment forces `XAUTHORITY=/tmp/host-xauthority`. That avoids failures caused by host-specific paths like `/run/user/1000/...` not existing inside the container.
+
 ## Current status
 
 This repository now has the pieces needed to try the setup on a NixOS Wayland machine, but it is still not verified end-to-end from this Windows workspace. I have not been able to build or run the image here because the current machine is not the target environment and Docker Desktop was not running.

@@ -27,11 +27,11 @@ docker run -d \
   -e XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}" \
   -e WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
   -e DISPLAY="${DISPLAY:-}" \
-  -e XAUTHORITY="${XAUTHORITY:-}" \
+  -e XAUTHORITY="/tmp/host-xauthority" \
   -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
   -v "${XDG_RUNTIME_DIR}:/tmp/host-runtime" \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v "${XAUTHORITY:-/dev/null}:${XAUTHORITY:-/tmp/.dummy-xauthority}:ro" \
+  -v "${XAUTHORITY:-/dev/null}:/tmp/host-xauthority:ro" \
   "${IMAGE_NAME}"
 
 echo
