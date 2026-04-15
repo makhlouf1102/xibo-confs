@@ -17,6 +17,7 @@ That last point is the reason this setup is heavier than a normal GUI container.
 - [create-host-user.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/create-host-user.sh): creates a user inside the container that matches the host UID/GID
 - [run-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/run-xibo.sh): launches Xibo under the host-matching UID against the mounted Wayland socket
 - [diagnose-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/diagnose-xibo.sh): dumps the key environment, socket mounts, and `snapd` status
+- [manage-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/manage-xibo.sh): one-command host helper that prepares the environment, starts the container, installs Xibo if needed, and can launch or diagnose it
 - [start-xibo-container.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/start-xibo-container.sh): plain `docker run` wrapper if you do not want to use Compose
 
 ## Why this should fit NixOS
@@ -140,6 +141,13 @@ docker compose build
 docker compose up -d
 ```
 
+Or use the helper script to do the same setup automatically:
+
+```bash
+chmod +x manage-xibo.sh
+./manage-xibo.sh setup
+```
+
 If the container comes up, initialize and install Xibo:
 
 ```bash
@@ -152,6 +160,19 @@ Then run the player:
 
 ```bash
 docker compose exec xibo-player run-xibo.sh
+```
+
+The helper script can also do the full sequence:
+
+```bash
+./manage-xibo.sh all
+```
+
+Other useful modes:
+
+```bash
+./manage-xibo.sh run
+./manage-xibo.sh diagnose
 ```
 
 ## Start with plain Docker
