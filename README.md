@@ -31,9 +31,9 @@ The container itself uses `--privileged`, host cgroups, and `systemd` because `s
 
 Install and enable Docker on the NixOS host before you try to build this container.
 
-If your normal user is already defined somewhere in your NixOS configuration, add that user to the `docker` group with their real login name. Do not paste `your-username` literally.
+If your normal user is already defined somewhere in your NixOS configuration, add `"docker"` to that user's existing `extraGroups` list. Do not create a second partial `users.users.<name>` entry just to add Docker access.
 
-Example for an existing user definition:
+Example for an existing user block like `users.users.xibo = { ... };`:
 
 ```nix
 { config, pkgs, ... }:
@@ -44,9 +44,16 @@ Example for an existing user definition:
     docker
     docker-compose
   ];
-  users.users.makhl.extraGroups = [ "docker" ];
+
+  users.users.xibo = {
+    isNormalUser = true;
+    description = "xibo";
+    extraGroups = [ "networkmanager" "wheel" "docker" ];
+  };
 }
 ```
+
+If your user block already exists elsewhere, keep that block where it is and only add `"docker"` to its `extraGroups`.
 
 If you are defining the user in this same file, make sure it is a normal user and has a group:
 
