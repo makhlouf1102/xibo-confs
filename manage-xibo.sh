@@ -73,6 +73,7 @@ compose() {
 
 compose_exec() {
   compose exec \
+    -T \
     -e HOST_UID="${HOST_UID}" \
     -e HOST_GID="${HOST_GID}" \
     -e HOST_USER="${HOST_USER}" \
