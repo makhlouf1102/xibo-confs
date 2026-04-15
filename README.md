@@ -1,242 +1,117 @@
-Use this layout instead.
+# Xibo Desktop Container for NixOS Wayland Hosts
 
-This version is for a **Wayland host**, avoids `xhost`, and shares the host’s `WAYLAND_DISPLAY` socket directly. That matters because Wayland apps connect over a Unix socket inside `XDG_RUNTIME_DIR`, and that directory is normally only accessible to the owning user. ([GitHub][1])
+This repository packages a Linux Wayland-oriented container setup for running the Xibo desktop player on a NixOS host.
 
-It still uses a **privileged Ubuntu container with systemd**, because `snapd` expects a real init system and substantial kernel integration, and Xibo’s Linux player is distributed as a Snap. ([Xibo Signage][2])
+The design is intentionally narrow:
+- the host is Linux, not Windows
+- the desktop session is Wayland
+- the container is privileged and runs `systemd`
+- Xibo is installed inside the container through `snapd`
 
-## 1) `Dockerfile`
+That last point is the reason this setup is heavier than a normal GUI container. Xibo distributes the Linux player as a Snap, so the container has to accommodate `snapd` rather than just launching a standalone binary.
 
-```dockerfile
-FROM ubuntu:22.04
+## What is in this repo
 
-ENV container=docker
-ENV DEBIAN_FRONTEND=noninteractive
+- [Dockerfile](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/Dockerfile): Ubuntu 22.04 image with `systemd`, `snapd`, Wayland/XWayland runtime packages, and helper scripts
+- [compose.yaml](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/compose.yaml): repeatable container startup for Linux Wayland hosts
+- [create-host-user.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/create-host-user.sh): creates a user inside the container that matches the host UID/GID
+- [run-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/run-xibo.sh): launches Xibo under the host-matching UID against the mounted Wayland socket
+- [diagnose-xibo.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/diagnose-xibo.sh): dumps the key environment, socket mounts, and `snapd` status
+- [start-xibo-container.sh](C:/Users/makhl/OneDrive/Documents/Projects/xibo-confs/start-xibo-container.sh): plain `docker run` wrapper if you do not want to use Compose
 
-RUN apt-get update && apt-get install -y \
-    systemd \
-    systemd-sysv \
-    snapd \
-    dbus \
-    sudo \
-    gosu \
-    ca-certificates \
-    util-linux \
-    kmod \
-    iproute2 \
-    procps \
-    xwayland \
-    libgl1-mesa-dri \
-    libegl1 \
-    libgbm1 \
-    mesa-utils \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+## Why this should fit NixOS
 
-STOPSIGNAL SIGRTMIN+3
+This setup avoids `xhost` and instead bind-mounts the host Wayland socket from `XDG_RUNTIME_DIR`. That is the right direction for Wayland sessions because the compositor socket is a Unix socket owned by the logged-in user.
 
-COPY create-host-user.sh /usr/local/bin/create-host-user.sh
-COPY run-xibo.sh /usr/local/bin/run-xibo.sh
+It also passes through `/tmp/.X11-unix`, `DISPLAY`, and `XAUTHORITY` as a fallback because some GUI applications on Wayland still end up using XWayland.
 
-RUN chmod +x /usr/local/bin/create-host-user.sh /usr/local/bin/run-xibo.sh
+The container itself uses `--privileged`, host cgroups, and `systemd` because `snapd` expects a more complete init and kernel integration surface than a typical single-process container.
 
-CMD ["/sbin/init"]
-```
+## Prerequisites on NixOS
 
-## 2) `create-host-user.sh`
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-: "${HOST_UID:?HOST_UID is required}"
-: "${HOST_GID:?HOST_GID is required}"
-: "${HOST_USER:=hostuser}"
-
-if ! getent group "${HOST_GID}" >/dev/null 2>&1; then
-  groupadd -g "${HOST_GID}" "${HOST_USER}"
-fi
-
-if ! id -u "${HOST_UID}" >/dev/null 2>&1; then
-  useradd -m -u "${HOST_UID}" -g "${HOST_GID}" -s /bin/bash "${HOST_USER}"
-fi
-
-mkdir -p "/run/user/${HOST_UID}"
-chown "${HOST_UID}:${HOST_GID}" "/run/user/${HOST_UID}"
-chmod 700 "/run/user/${HOST_UID}"
-
-echo "Host-matching user is ready:"
-id "${HOST_USER}" || true
-```
-
-## 3) `run-xibo.sh`
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-: "${HOST_UID:?HOST_UID is required}"
-: "${HOST_GID:?HOST_GID is required}"
-: "${HOST_USER:=hostuser}"
-: "${WAYLAND_DISPLAY:?WAYLAND_DISPLAY is required}"
-
-export XDG_RUNTIME_DIR="/tmp/host-runtime"
-export WAYLAND_DISPLAY="${WAYLAND_DISPLAY}"
-
-if [ -n "${DISPLAY:-}" ]; then
-  export DISPLAY
-fi
-
-if [ -n "${XAUTHORITY:-}" ]; then
-  export XAUTHORITY
-fi
-
-if [ ! -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]; then
-  echo "Wayland socket not found at ${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
-  exit 1
-fi
-
-exec gosu "${HOST_UID}:${HOST_GID}" snap run xibo-player
-```
-
-## 4) `start-xibo-container.sh`
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-IMAGE_NAME="xibo-snap-wayland"
-CONTAINER_NAME="xibo-player-wayland"
-
-: "${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR must be set on the host}"
-: "${WAYLAND_DISPLAY:?WAYLAND_DISPLAY must be set on the host}"
-
-HOST_UID="$(id -u)"
-HOST_GID="$(id -g)"
-HOST_USER="$(id -un)"
-
-docker build -t "${IMAGE_NAME}" .
-
-docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-
-docker run -d \
-  --name "${CONTAINER_NAME}" \
-  --privileged \
-  --cgroupns=host \
-  --network host \
-  --ipc host \
-  -e HOST_UID="${HOST_UID}" \
-  -e HOST_GID="${HOST_GID}" \
-  -e HOST_USER="${HOST_USER}" \
-  -e XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}" \
-  -e WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
-  -e DISPLAY="${DISPLAY:-}" \
-  -e XAUTHORITY="${XAUTHORITY:-}" \
-  -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-  -v "${XDG_RUNTIME_DIR}:/tmp/host-runtime" \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v "${XAUTHORITY:-/dev/null}:${XAUTHORITY:-/tmp/.dummy-xauthority}:ro" \
-  "${IMAGE_NAME}"
-
-echo
-echo "Container started: ${CONTAINER_NAME}"
-echo
-echo "Next commands:"
-echo "  docker exec -it ${CONTAINER_NAME} bash"
-echo "  docker exec -it ${CONTAINER_NAME} create-host-user.sh"
-echo "  docker exec -it ${CONTAINER_NAME} bash -lc 'snap wait system seed.loaded'"
-echo "  docker exec -it ${CONTAINER_NAME} snap install xibo-player"
-echo "  docker exec -it ${CONTAINER_NAME} run-xibo.sh"
-```
-
-## 5) Host commands to run
-
-On the NixOS machine:
-
-```bash
-mkdir -p ~/xibo-wayland
-cd ~/xibo-wayland
-```
-
-Create the three files above:
-
-```bash
-nano Dockerfile
-nano create-host-user.sh
-nano run-xibo.sh
-nano start-xibo-container.sh
-```
-
-Make the scripts executable:
-
-```bash
-chmod +x create-host-user.sh run-xibo.sh start-xibo-container.sh
-```
-
-Check your session is Wayland:
+You need all of the following on the host:
 
 ```bash
 echo "$XDG_SESSION_TYPE"
 echo "$XDG_RUNTIME_DIR"
 echo "$WAYLAND_DISPLAY"
+docker --version
+docker compose version
 ```
 
-Start the container:
+Expected results:
+- `XDG_SESSION_TYPE` should be `wayland`
+- `XDG_RUNTIME_DIR` should be set to your active user runtime directory
+- `WAYLAND_DISPLAY` should be set, usually something like `wayland-0`
+- Docker and the Compose plugin should be installed and working
+
+## Start with Docker Compose
+
+From the repository root on the NixOS machine:
 
 ```bash
+export HOST_UID="$(id -u)"
+export HOST_GID="$(id -g)"
+export HOST_USER="$(id -un)"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY}"
+export DISPLAY="${DISPLAY:-}"
+export XAUTHORITY="${XAUTHORITY:-}"
+docker compose build
+docker compose up -d
+```
+
+If the container comes up, initialize and install Xibo:
+
+```bash
+docker compose exec xibo-player create-host-user.sh
+docker compose exec xibo-player bash -lc 'snap wait system seed.loaded'
+docker compose exec xibo-player snap install xibo-player
+```
+
+Then run the player:
+
+```bash
+docker compose exec xibo-player run-xibo.sh
+```
+
+## Start with plain Docker
+
+If you prefer not to use Compose:
+
+```bash
+chmod +x create-host-user.sh run-xibo.sh diagnose-xibo.sh start-xibo-container.sh
 ./start-xibo-container.sh
-```
-
-Install Snap metadata and Xibo:
-
-```bash
-docker exec -it xibo-player-wayland bash
-create-host-user.sh
-snap wait system seed.loaded
-snap install xibo-player
-exit
-```
-
-Run Xibo:
-
-```bash
+docker exec -it xibo-player-wayland create-host-user.sh
+docker exec -it xibo-player-wayland bash -lc 'snap wait system seed.loaded'
+docker exec -it xibo-player-wayland snap install xibo-player
 docker exec -it xibo-player-wayland run-xibo.sh
 ```
 
-## 6) What this fixes
+## Diagnostics
 
-Your previous setup failed on `xhost` because that is an **X11 access-control tool**. On a Wayland session, the better path is to bind-mount the actual Wayland socket and run the app under the same numeric UID as the host user, because `XDG_RUNTIME_DIR` is normally owner-only. ([GitHub][1])
-
-I still mounted `/tmp/.X11-unix` and passed `DISPLAY` as a fallback because many GUI apps on Wayland end up going through **XWayland** rather than speaking native Wayland directly. That is an inference based on how containerized desktop apps are commonly run and on the guidance that XWayland access can be shared similarly to normal X access. ([GitHub][1])
-
-## 7) If `snap install xibo-player` fails
-
-Run these diagnostics inside the container:
+If the install or startup fails, run:
 
 ```bash
-systemctl status snapd --no-pager
-systemctl status snapd.socket --no-pager
-snap version
-journalctl -u snapd --no-pager -n 100
+docker compose exec xibo-player diagnose-xibo.sh
 ```
 
-If `run-xibo.sh` fails with display errors, run:
+If you are using plain Docker instead of Compose:
 
 ```bash
-ls -l /tmp/host-runtime
-echo "$WAYLAND_DISPLAY"
-echo "$DISPLAY"
+docker exec -it xibo-player-wayland diagnose-xibo.sh
 ```
 
-The two most likely remaining failures are:
+The most likely failures are:
+- `snapd` has not finished seeding
+- the Wayland socket is not mounted where the container expects it
+- Xibo falls back to XWayland and needs a valid `DISPLAY` and `XAUTHORITY`
+- the host Docker configuration or cgroup setup is still not sufficient for `systemd` plus `snapd`
 
-* `snapd` did not finish seeding yet.
-* Xibo is using XWayland instead of native Wayland and needs the host X authority path to exist in your session.
+## Current status
 
-If you hit the next error, paste the exact output from:
+This repository now has the pieces needed to try the setup on a NixOS Wayland machine, but it is still not verified end-to-end from this Windows workspace. I have not been able to build or run the image here because the current machine is not the target environment and Docker Desktop was not running.
 
-```bash
-docker exec -it xibo-player-wayland bash -lc 'snap version && systemctl status snapd --no-pager && journalctl -u snapd --no-pager -n 60'
-```
-
-[1]: https://github.com/mviereck/x11docker/wiki/How-to-provide-Wayland-socket-to-docker-container?utm_source=chatgpt.com "How to provide Wayland socket to docker container"
-[2]: https://account.xibosignage.com/docs/setup/xibo-for-linux-installation?utm_source=chatgpt.com "Xibo for Linux Installation"
+So the current claim should be:
+- suitable for NixOS testing
+- not yet proven working on NixOS until someone builds and runs it there
